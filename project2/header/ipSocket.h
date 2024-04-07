@@ -24,7 +24,7 @@ public:
 
     void createSocket(const char* interfaceName);
     void closeSocket();
-    void setSourceAddress(const char* sourceIp, const char* sourceMac);
+    void setSourceAddress(uint32_t sourceIp, std::array<uint8_t, 6> sourceMac);
     int receivePacketToMe(uint8_t* buffer, int bufferSize);
     bool checkNeedRedirect(const iphdr* ipHeader);
     void redirectPacket(void* packet, std::array<uint8_t, 6> destMac);

@@ -26,5 +26,5 @@ class mitmAttack {
         void setupSocket(const char* interface);
         void getNeighbours();
         void poisonNeighbours();
-        void processPackets();
+        void processPackets(const char* interface);
 };

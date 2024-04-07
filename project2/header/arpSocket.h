@@ -31,7 +31,7 @@ public:
     void createSocket(const char* interfaceName);
     void setTimeout(int sec, int usec);
     void closeSocket();
-    void setSourceAddress(const char* sourceIp, const char* sourceMac);
+    void setSourceAddress(uint32_t sourceIp, std::array<uint8_t, 6> sourceMac);
     void sendArpRequest(const char* targetIp);
     bool getArpReply(arpPacket* arp, bool waitUntilReceive = false);
     bool getArpRequest(arpPacket* arp, sockaddr_ll* sll, bool waitUntilReceive = true);

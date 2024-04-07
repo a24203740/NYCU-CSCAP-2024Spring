@@ -54,10 +54,10 @@ void ipSocket::closeSocket()
     }
 }
 
-void ipSocket::setSourceAddress(const char* sourceIp, const char* sourceMac) 
+void ipSocket::setSourceAddress(uint32_t sourceIp, std::array<uint8_t, 6> sourceMac) 
 {
-    this->sourceIp = util::stringToIp(sourceIp);
-    this->sourceMac = util::stringToMac(sourceMac);
+    this->sourceIp = sourceIp;
+    this->sourceMac = sourceMac;
 }
 
 int ipSocket::receivePacketToMe(uint8_t* buffer, int bufferSize) 
