@@ -14,7 +14,8 @@ int main(int argc, char *argv[])
     const char* interface = argv[1];
     mitmAttack mitm;
     mitm.setupSocket(interface);
-    mitm.getNeighbours();
+    uint32_t gatewayIp = util::getDefaultGateway(interface);
+    mitm.getNeighbours(gatewayIp);
     // make a thread for poisonNeighbours
     std::thread poisonNeighboursThread(&mitmAttack::poisonNeighbours, &mitm);
     sleep(1);

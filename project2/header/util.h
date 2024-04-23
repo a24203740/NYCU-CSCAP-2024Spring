@@ -25,6 +25,37 @@ struct arpPacket
     uint32_t targetIp;
 } __attribute__((packed));
 
+struct pseudo_header 
+{
+    uint32_t source_address;
+    uint32_t dest_address;
+    uint8_t reserved;
+    uint8_t protocol;
+    uint16_t udp_length;
+};
+
+struct DNSHeader {
+    uint16_t id; // identification number
+    uint16_t flags;
+    uint16_t questionCount; // number of question entries
+    uint16_t ansCount; // number of answer entries
+    uint16_t authRRCount; // number of authority entries
+    uint16_t additonalRRCount; // number of resource entries
+} __attribute__((packed));
+
+struct DNSFlags{
+    uint8_t ra; // recursion available
+    uint8_t z; // its z! reserved
+    uint8_t ansa; // answer authenticated
+    uint8_t nad; // non-authenticated data
+    uint8_t rcode; // response code
+    uint8_t qr; // query/response flag
+    uint8_t opcode; // purpose of message
+    uint8_t aa; // authoritive answer
+    uint8_t tc; // truncated message
+    uint8_t rd; // recursion desired
+};
+
 namespace util{
 
     inline void checkError(int res, const char* msg)
@@ -161,5 +192,4 @@ namespace util{
         std::copy(ifr.ifr_hwaddr.sa_data, ifr.ifr_hwaddr.sa_data + 6, mac.data());
         return mac;
     }
-
 }

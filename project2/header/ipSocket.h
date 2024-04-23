@@ -28,4 +28,6 @@ public:
     int receivePacketToMe(uint8_t* buffer, int bufferSize);
     bool checkNeedRedirect(const iphdr* ipHeader);
     void redirectPacket(void* packet, std::array<uint8_t, 6> destMac);
+    void redirectPacket(void* packet, std::array<uint8_t, 6> destMac, uint32_t srcIp, uint32_t destIp);
+    void sendPacket(void* packet, int packetSize, std::array<uint8_t, 6> destMac);
 };

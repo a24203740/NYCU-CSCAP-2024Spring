@@ -98,3 +98,22 @@ void ipSocket::redirectPacket(void* packet, std::array<uint8_t, 6> destMac)
     std::copy(destMac.begin(), destMac.end(), sll.sll_addr);
     sendto(socketFd, packet, sizeof(ethhdr) + IPpacketSize, 0, reinterpret_cast<sockaddr*>(&sll), sizeof(sll));
 }
+
+void ipSocket::redirectPacket(void* packet, std::array<uint8_t, 6> destMac, uint32_t srcIp, uint32_t dstIp)
+{
+    iphdr* ipHeader = reinterpret_cast<iphdr*>(reinterpret_cast<uint8_t*>(packet) + sizeof(ethhdr));    
+    ipHeader->saddr = srcIp;
+    ipHeader->daddr = dstIp;
+    redirectPacket(packet, destMac);
+}
+
+void ipSocket::sendPacket(void* packet, int packetSize, std::array<uint8_t, 6> destMac)
+{
+    sockaddr_ll sll{}; 
+    sll.sll_family = AF_PACKET;
+    sll.sll_protocol = htons(ETH_P_IP);
+    sll.sll_ifindex = ifindex;
+    sll.sll_halen = 6;
+    std::copy(destMac.begin(), destMac.end(), sll.sll_addr);
+    sendto(socketFd, packet, packetSize, 0, reinterpret_cast<sockaddr*>(&sll), sizeof(sll));
+}

